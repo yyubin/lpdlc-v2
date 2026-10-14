@@ -117,9 +117,41 @@ keyword "보존" { prop kind special_charge  prop count_max 20  prop inherit "�
 
 #202의 해석 질문은 모두 확인됨 (review 항목은 hook 2개만 남음).
 
-## 5. 다음 단계
+## 5. 컴파일러
 
-1. Claude 컴파일 프롬프트 (`lpdl/prompt/`): 문법 요약 + vocab + 검증된 예시(#202) + 원문 → .lpdl, 검증 오류를 피드백해 재생성 (v1 `NLToSQLPipeline` 루프를 이식)
-2. #203, #204를 LLM으로 컴파일 → #202 방식으로 품질 측정 (오류 수, review 수, 사람 수정량)
+```
+gesellschaft DB ─source.py─▶ 원문 텍스트 ─┐
+                                          ├─▶ Claude ─▶ ```lpdl``` ─▶ check() ─┬─ 통과 → compiled/identity/{id}.lpdl
+prompt.py: 언어 요약 + vocab + R1~R5 ─────┘        ▲                          │
+          + 정의된 키워드 + #202 예시(원문/출력)    └──── 오류 피드백 (최대 N회) ◀┘
+```
+
+- `check()` = 구문 → 의미 검증(예시 키워드 정의와 합쳐서) → **완전성 검사**(원문의 스킬·variant·효과 있는 코인·패시브가 모두 있는지) → 이미 정의된 키워드 재선언 금지
+- 백엔드: `claude-code`(`claude -p`, 도구 없음, 빈 임시 디렉터리에서 실행, `--resume`으로 피드백) / `api`(Anthropic SDK, `claude-opus-5-5`, adaptive thinking, 시스템 프롬프트 캐시, `fallbacks: "default"`)
+- 결과 보고서 `{id}.report.json`: 시도별 오류, 남은 검수 항목, 사용량
+
+## 6. 첫 컴파일 결과 (#203·#204, claude-code 백엔드, 2026-10-14)
+
+| | 시도 | 남은 오류 | 검수 항목 | 비용(추정) |
+|---|---|---|---|---|
+| #203 로쟈 · 수선실 | 2 (1차: 없는 키워드 "나태 내성 약화") | 0 | 30 | 약 $1.2 |
+| #204 돈키호테 · 르누아르 브랜드 매니저 | 2 (1차: hook 인자에 스킬 참조 → 구문 오류) | 0 | 60 | 약 $1.7 |
+
+hook·note 로 드러난 **어휘 부족** (자주 나온 순):
+1. 소속 판정 ("르누아르 소속 아군") → `has_affiliation(unit, "르누아르")`
+2. 인격 분류 ("충전 인격") → 키워드 태그 기반 `is_identity_of(unit, 충전)`
+3. 대상 선택 기준: 현재 체력 비율, 충전 횟수, 속도, "충전 인격 우선" → `pick(by:)` 에 식 허용 + `hp_ratio` 필드
+4. 아군 이벤트: 아군 피격, 아군 공격 시작 전, 아군 대상 공격 → `ally_hit_taken`, `ally_before_attack`, `target is ally`
+5. 죄악 속성 피해 ("나태 피해") → `deal` 피해 유형에 죄악 7종
+6. 최대 공명 수, 메인 타겟, 다중 대상 합산
+7. 코인 재사용(조건부), 추가 스킬 발동, 진폭 변환(키워드 유형 변경)
+8. 다른 유닛에 거는 오라 효과 (보존 신역: 아군 공격 레벨, 적 받는 피해)
+9. 획득량 중 최대치 초과분 (`ev.overflow`)
+
+## 7. 다음 단계
+
+1. 위 어휘 확장 (1~5 우선) → #203·#204 재컴파일 → hook 수 감소 확인
+2. 검수 통과한 결과를 examples 로 승격 (few-shot 다양화)
 3. gesellschaft 엔진 로더: AST → 이벤트 훅 등록. `hook`은 `hooks/<이름>.py`
 4. 키워드 정의 확대: 표준 상태(출혈·화상·진동·파열·침잠·호흡·충전)를 `keywords/standard.lpdl`로
+5. 역번역 diff 검증 (컴파일과 다른 컨텍스트에서 AST → 자연어 → 원문 비교)

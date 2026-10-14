@@ -1,0 +1,129 @@
+{
+  "identity_id": 203,
+  "ok": true,
+  "review": [
+    "[review] 15 keyword \"두 가위\": note: 수치가 하나뿐인 상태 → potency 로 표현, 최댓값 1",
+    "[review] 26 keyword \"두 가위\": hook gain_sanity_if_charge_identity: Python 구현 필요",
+    "[review] 27 keyword \"두 가위\": note: '충전 인격'은 인격의 키워드 분류이며 현재 보유 여부와 다름 → 고정 어휘의 식으로 판정 불가, hook",
+    "[review] 31 keyword \"두 가위\": hook deal_pct_of_coin_final_damage: Python 구현 필요",
+    "[review] 32 keyword \"두 가위\": note: coin.final_damage 는 코인 블록 안에서만 참조 가능 → 키워드 블록에서는 hook",
+    "[review] 39 keyword \"마름질 표식\": note: 수치가 하나뿐인 상태 → potency 로 표현, 최댓값 2",
+    "[review] 46 keyword \"마름질 표식\": hook reward_mark_applier: Python 구현 필요",
+    "[review] 47 keyword \"마름질 표식\": note: '이 효과 부여자'를 가리킬 유닛 참조가 없음 → hook. 정신력 5 회복(즉시), 공격 레벨 증가 1(다음 턴). 턴당 3회 제한은 부여자 기준",
+    "[review] 72 identity 203 skill S1: hook bipolar_targeting: Python 구현 필요",
+    "[review] 73 identity 203 skill S1: note: 양극성: 아군 지정 가능, 자동 지정·일반 전투 시 편성 순서가 가장 빠른 아군 우선, 아군 대상이면 적중·수비 스킬 발동 없음, 아군 지정 시 전투 시작 시 발동 → 대상 지정 규칙이라 hook",
+    "[review] 79 identity 203 skill S1: note: '충전 횟수 4 부여' = 대상의 충전 횟수 4 증가로 해석. '대상이 아군' = count_of(allies, it == target) > 0",
+    "[review] 85 identity 203 skill S1: hook apply_if_charge_identity: Python 구현 필요",
+    "[review] 86 identity 203 skill S1: note: '대상이 충전 인격이면'은 인격 분류 판정이라 식으로 표현 불가 → hook",
+    "[review] 98 identity 203 skill S1 variant 1 coin 1: hook reuse_this_coin: Python 구현 필요",
+    "[review] 99 identity 203 skill S1 variant 1 coin 1: note: 조건부 재사용은 무조건 flag reuse 로 표현 불가 → hook",
+    "[review] 117 identity 203 skill S2: hook apply_if_charge_identity: Python 구현 필요",
+    "[review] 118 identity 203 skill S2: hook shield_if_charge_identity: Python 구현 필요",
+    "[review] 119 identity 203 skill S2: hook tailor_ally_buff_s2: Python 구현 필요",
+    "[review] 120 identity 203 skill S2: note: 아군 2명 선택(충전 인격 우선 편성 순서, 현재 체력 비율)은 pick 으로 표현 불가 → hook. 각 아군에게 공격 레벨 증가 2 + 보호막 sh, 충전 인격이면 공격 레벨 증가 1 + 보호막 sh 추가. '자신을 제외한'은 두 선택 모두에 적용, '최소 1'은 추가 보호막에도 적용한 것으로 해석",
+    "[review] 144 identity 203 skill S2 coin 3: hook apply_status: Python 구현 필요",
+    "[review] 145 identity 203 skill S2 coin 3: note: '나태 내성 약화'는 정의된 키워드 목록에 없음 → 지어내지 않고 hook 으로 부여",
+    "[review] 184 identity 203 skill S3: hook tailor_ally_buff_s3: Python 구현 필요",
+    "[review] 185 identity 203 skill S3: note: 아군 2명 선택(충전 인격 우선 편성 순서, 현재 체력 비율)은 pick 으로 표현 불가 → hook. 각 아군에게 두 가위 1 + 보호막 sh. '자신을 제외한'은 두 선택 모두에 적용한 것으로 해석",
+    "[review] 232 identity 203 skill DEF: hook tailor_ally_shield_def: Python 구현 필요",
+    "[review] 233 identity 203 skill DEF: note: 현재 체력 비율 기준 선택은 pick(by: 유닛필드)으로 표현 불가 → hook. 자신을 제외한 체력 비율 최저 아군 2명에게 보호막 sh",
+    "[review] 265 identity 203 passive \"표류 관성\": hook trigger_skill: Python 구현 필요",
+    "[review] 266 identity 203 passive \"표류 관성\": note: pick 에 n 을 생략 = 조건을 만족하는 아군 전원. target = 공격을 마친 아군의 대상. 추가 스킬 발동은 고정 어휘에 없음 → hook",
+    "[review] 271 identity 203 passive \"표류 관성\": note: 위 효과로 발동되는 '패턴 따기'의 [사용전] 시점 효과라 별도 블록으로 분리",
+    "[review] 279 identity 203 support \"한 가위\": hook damage_pct_if_skill_damage_type: Python 구현 필요",
+    "[review] 280 identity 203 support \"한 가위\": note: 스킬 피해 유형(참격) 판정은 skill is 분류에 없음 → hook"
+  ],
+  "attempts": [
+    {
+      "n": 1,
+      "errors": [
+        "[error] 60 identity 203: use 나태약화 = \"나태 내성 약화\": 알 수 없는 키워드 (혹시 '참격 내성 약화'?)"
+      ]
+    },
+    {
+      "n": 2,
+      "errors": []
+    }
+  ],
+  "backend": "claude-code",
+  "usage": [
+    {
+      "total_cost_usd": 0.434744,
+      "duration_ms": 137420,
+      "num_turns": 1,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 15177,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 15666,
+        "output_tokens_details": {
+          "thinking_tokens": 11082
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 15177,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 15666,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 15177,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 15177
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      }
+    },
+    {
+      "total_cost_usd": 0.720928,
+      "duration_ms": 32163,
+      "num_turns": 1,
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 23777,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 4798,
+        "output_tokens_details": {
+          "thinking_tokens": 141
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 23777,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 4798,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 23777,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 23777
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      }
+    }
+  ]
+}

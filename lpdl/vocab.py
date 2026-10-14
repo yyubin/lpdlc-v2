@@ -13,6 +13,7 @@ EVENTS = {
     "combat_start": "[전투 시작시]",
     "before_use": "[사용전]",
     "use": "[사용시]",
+    "before_attack": "[공격 시작 전]",
     "clash_start": "[합 진행 시]",
     "clash_win": "[합 승리시]",
     "clash_lose": "[합 패배시]",
@@ -90,7 +91,7 @@ FUNCS = {
     "pick": (1, 1, {"where", "by", "n", "desc"}),   # pick(allies, where: has(it, 충전), by: formation, n: 1)
 }
 
-FLAGS = {"clashable_counter", "unbreakable", "reuse", "aoe"}
+FLAGS = {"clashable_counter", "unbreakable", "reuse", "aoe", "unclashable", "fixed_target"}   # unclashable=[합 불가능], fixed_target=[대상 변경 불가]
 
 KEYWORD_KINDS = {"status", "charge", "special_charge", "value"}
 KEYWORD_PROPS = {"kind", "max", "count_max", "potency_max", "inherit"}
