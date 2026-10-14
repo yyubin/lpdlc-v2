@@ -1,0 +1,61 @@
+lpdl 2
+
+# 르누아르 계열 인격 고유 키워드. 원문: gesellschaft keyword 테이블 (baslimbus keyword_dict)
+
+keyword "보존" {
+  prop kind special_charge
+  prop count_max 20
+  prop inherit "충전"          # 충전 위력·횟수 증감 효과를 동일하게 적용받음
+  on turn_end {
+    gain self.보존.count -1
+  }
+}
+
+keyword "르누아르 개버딘 원단 코트" {
+  prop kind value
+  prop max 100
+  use 코트 = "르누아르 개버딘 원단 코트"
+  use 아르뮈르 = "아르뮈르 에비이예"
+  budget 보존연동 30/turn
+  budget 피격연동 10/turn
+  always {
+    modify def_level per(self.코트, 25)
+    hook leftmost_slot_taunt(5)    # 가장 왼쪽 슬롯의 도발치 +5 — 슬롯 단위 효과는 엔진 API로
+  }
+  on hit_taken when self.shield > 0 {
+    gain self.코트 5 budget 피격연동
+  }
+  on turn_end when self.shield > 0 {
+    gain self.코트 10
+  }
+  on gained(self.보존.count) when ev.source is basic_skill or ev.source is attack {
+    gain self.코트 ev.amount budget 보존연동
+    note "원문 '자신의 스킬, 패시브 효과로' — source 분류에 passive 가 필요. 보존 최대치 초과분 포함"
+  }
+  on consumed(self.보존.count) {
+    gain self.코트 ev.amount * 2 budget 보존연동
+  }
+  on gained(self.코트) when self.코트 >= 100 {
+    convert self.코트 -> self.아르뮈르 next_turn
+  }
+}
+
+keyword "아르뮈르 에비이예" {
+  prop kind value
+  prop max 100
+  use 아르뮈르 = "아르뮈르 에비이예"
+  use 코트 = "르누아르 개버딘 원단 코트"
+  always {
+    modify speed_min 2
+    modify speed_max 2
+    modify atk_level per(self.아르뮈르, 25)
+    modify def_level per(self.아르뮈르, 25)
+    hook basic_attacks_unbreakable   # 모든 기본 공격 스킬이 파괴 불가 코인으로 변경
+  }
+  on turn_start {
+    gain self.sanity 8
+  }
+  on consumed(self.아르뮈르) when self.아르뮈르 == 0 {
+    convert self.아르뮈르 -> self.코트
+  }
+}

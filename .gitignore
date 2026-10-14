@@ -45,3 +45,10 @@ bin/
 gradlew.bat
 # Environment variables
 .env
+
+### Python ###
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/

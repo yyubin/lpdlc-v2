@@ -1,0 +1,152 @@
+// LPDL v2 — Limbus Persona Description Language
+// 메커니즘(효과)만 기술한다. 수치 스탯(체력·위력·코인 수 등)은 데이터 소스(gesellschaft DB)에서 온다.
+
+start: header? decl*
+header: "lpdl" NUMBER
+
+?decl: identity
+     | keyword_decl
+
+// ── 인격 ────────────────────────────────────────────────────────────────────
+identity: "identity" NUMBER STRING? "{" identity_member* "}"
+?identity_member: use | budget | text | note_stmt | skill | passive
+
+use: "use" NAME "=" STRING                      // use 코트 = "르누아르 개버딘 원단 코트"
+budget: "budget" NAME limit_spec                // budget 코트획득 30/turn  (gain ... budget 코트획득)
+text: "text" TEXT
+
+skill: "skill" skill_ref STRING? "{" skill_member* "}"
+?skill_member: text | note_stmt | flag | block | coin
+flag: "flag" NAME
+coin: "coin" NUMBER "{" coin_member* "}"
+?coin_member: text | note_stmt | flag | block
+
+passive: PASSIVE_KIND STRING "{" passive_member* "}"
+PASSIVE_KIND: "passive" | "support"
+?passive_member: text | note_stmt | requires | block | use | budget
+requires: "requires" COND_KIND "[" NAME ("," NAME)* "]" NUMBER   // requires hold [나태, 오만] 2
+COND_KIND: "hold" | "resonate"
+
+// ── 키워드 정의 (인격 고유 자원·상태) ───────────────────────────────────────
+keyword_decl: "keyword" STRING "{" keyword_member* "}"
+?keyword_member: text | note_stmt | prop | block | use | budget
+prop: "prop" NAME prop_value                    // prop kind special_charge / prop max 100
+?prop_value: NUMBER -> num
+           | STRING -> str
+           | NAME   -> name
+
+// ── 효과 블록 ───────────────────────────────────────────────────────────────
+?block: on_block | always_block
+on_block: "on" NAME event_args? on_opt* body    // on hit_taken when self.shield > 0 limit 2/turn/target { ... }
+event_args: "(" [expr ("," expr)*] ")"
+?on_opt: "when" expr      -> on_when
+       | "limit" limit_spec -> on_limit
+       | "by" expr        -> on_by
+       | "every" expr     -> on_every
+always_block: "always" body
+
+limit_spec: NUMBER "/" PERIOD per_target?
+per_target: "/" "target"
+PERIOD: "turn" | "battle" | "use"
+
+body: "{" stmt* "}"
+
+// ── 문장 ────────────────────────────────────────────────────────────────────
+?stmt: when_stmt
+     | text
+     | let_stmt
+     | gain_stmt
+     | apply_stmt
+     | consume_stmt
+     | modify_stmt
+     | burst_stmt
+     | deal_stmt
+     | replace_stmt
+     | convert_stmt
+     | defer_stmt
+     | hook_stmt
+     | unparsed_stmt
+     | note_stmt
+
+when_stmt: "when" expr body elif_clause* else_clause?
+elif_clause: "elif" expr body
+else_clause: "else" body
+
+let_stmt: "let" NAME "=" expr
+gain_stmt: "gain" ref expr stmt_opt*                        // gain self.보존.count 2
+apply_stmt: "apply" expr NAME apply_part+ stmt_opt*         // apply target 진동 potency 2 count 1
+?apply_part: "potency" expr -> potency
+           | "count" expr   -> count
+consume_stmt: "consume" ref consume_amount bind? stmt_opt*  // consume self.아르뮈르 up_to 15 -> n
+?consume_amount: expr          -> amount_exact
+               | "up_to" expr  -> amount_up_to
+               | "all"         -> amount_all
+bind: "->" NAME
+modify_stmt: "modify" NAME expr stmt_opt*                   // modify damage_pct n * 3 cap 45
+burst_stmt: "burst" expr NAME times?                        // burst target 진동 times 2
+times: "times" expr
+deal_stmt: "deal" expr NAME expr                            // deal target pierce pct(coin.final_damage, 10)
+replace_stmt: "replace" skill_target "->" skill_ref stmt_opt*   // replace S3 -> S3 variant 1 this_turn
+?skill_target: skill_ref
+             | "this" -> this_skill
+convert_stmt: "convert" ref "->" ref stmt_opt*              // convert self.코트 -> self.아르뮈르 next_turn
+defer_stmt: "defer" NAME body                               // defer attack_end { ... }
+hook_stmt: "hook" NAME event_args?
+unparsed_stmt: "unparsed" TEXT reason?
+reason: "reason" STRING
+note_stmt: "note" STRING
+
+?stmt_opt: "cap" expr     -> opt_cap
+         | "next_turn"    -> opt_next_turn
+         | "this_turn"    -> opt_this_turn
+         | "coins" COIN_SEL -> opt_coins
+         | "budget" NAME  -> opt_budget
+COIN_SEL: "all" | "first" | "last" | "current" | /\d+/
+
+skill_ref: SLOT variant?
+variant: "variant" NUMBER
+SLOT.2: "S1" | "S2" | "S3" | "DEF" | "EGO"
+
+// ── 수식 ────────────────────────────────────────────────────────────────────
+?expr: or_expr
+?or_expr: and_expr ("or" and_expr)*         -> or_
+?and_expr: not_expr ("and" not_expr)*       -> and_
+?not_expr: "not" not_expr                   -> not_
+         | cmp
+?cmp: sum
+    | sum CMP_OP sum                        -> compare
+    | sum "is" is_target                    -> is_
+?is_target: NAME -> name
+          | skill_ref
+?sum: product
+    | sum "+" product                       -> add
+    | sum "-" product                       -> sub
+?product: unary
+        | product "*" unary                 -> mul
+        | product "/" unary                 -> div
+?unary: "-" unary                           -> neg
+      | "+" unary                           -> pos
+      | atom
+?atom: NUMBER                               -> num
+     | STRING                               -> str
+     | ref
+     | call
+     | "(" expr ")"
+     | "[" [expr ("," expr)*] "]"           -> list_
+call: NAME "(" [arg ("," arg)*] ")"
+?arg: expr
+    | NAME ":" expr                         -> kwarg
+ref: NAME ("." NAME)*
+
+CMP_OP: ">=" | "<=" | "==" | "!=" | ">" | "<"
+
+// ── 토큰 ────────────────────────────────────────────────────────────────────
+NAME: /[가-힣A-Za-z_][가-힣A-Za-z0-9_]*/
+TEXT.3: /"""(.|\n)*?"""/
+STRING: /"(\\.|[^"\\\n])*"/
+NUMBER: /\d+(\.\d+)?/
+COMMENT: /#[^\n]*/
+
+%import common.WS
+%ignore WS
+%ignore COMMENT

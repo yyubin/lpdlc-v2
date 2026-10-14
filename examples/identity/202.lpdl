@@ -1,0 +1,253 @@
+lpdl 2
+
+# 료슈 — 오트쿠튀르::르누아르 신발관 (동기화 4)
+# 원문: gesellschaft DB (baslimbus), skill 1666/1668/1670/1672/1674, passive 944/945/946/948
+identity 202 "오트쿠튀르::르누아르 신발관" {
+  use 코트 = "르누아르 개버딘 원단 코트"
+  use 아르뮈르 = "아르뮈르 에비이예"
+
+  skill S1 "불결하군" {
+    on combat_start limit 2/turn {
+      text """[전투 시작시] 자신의 보존 위력이 3, 보존 횟수가 12 이상이면, 보존 횟수를 6 소모하여 최대 체력의 5%만큼 보호막 얻음 (턴당 2회)"""
+      when self.보존.potency >= 3 and self.보존.count >= 12 {
+        consume self.보존.count 6
+        gain self.shield pct(self.max_hp, 5)
+      }
+    }
+    on use {
+      when self.보존.count < 12 {
+        gain self.보존.count 2
+      }
+    }
+    on use when self.코트 >= 50 {
+      modify clash_power 1
+      modify damage_pct 30
+    }
+    on use {
+      consume self.아르뮈르 up_to 15 -> n
+      when n > 0 {
+        modify final_power 1
+        modify damage_pct n * 3 cap 45
+      }
+      note "원문에 소모 여부 조건이 없음. 0 소모 시에도 최종 위력 +1 인지 확인 필요"
+    }
+    coin 1 {
+      on hit { apply target 진동 potency 2 }
+    }
+    coin 2 {
+      on hit { gain self.보존.count 5 }
+    }
+  }
+
+  skill S2 "와서 시착해봐라" {
+    on use {
+      when self.보존.count >= 12 {
+        consume self.보존.count 6
+        modify final_power 1
+        modify damage_pct 20
+      }
+      gain self.보존.count 4
+    }
+    on use when self.코트 >= 50 {
+      modify damage_pct 15
+    }
+    on use {
+      consume self.아르뮈르 up_to 20 -> n
+      when n > 0 {
+        modify final_power 1
+        modify damage_pct n cap 20
+      }
+    }
+    coin 1 {
+      on hit { gain self.보존.count min(self.보존.potency + 3, 6) }
+    }
+    coin 2 {
+      on hit {
+        apply target 진동 potency 2
+        gain target.진동.count 2
+      }
+    }
+    coin 3 {
+      on hit when self.보존.potency >= 3 {
+        burst target 진동
+        gain target.진동.count -1
+      }
+    }
+  }
+
+  skill S3 "트리플 스탬피드 스티칭" {
+    on combat_start limit 1/turn {
+      gain self.코트 20
+    }
+    on use {
+      when self.보존.count >= 10 {
+        consume self.보존.count up_to 20 -> n
+        modify damage_pct n cap 20
+      }
+      gain self.보존.count 5
+    }
+    on use {
+      let k = per(self.코트, 30)
+      modify clash_power k cap 3
+      modify damage_pct k * 20 cap 60
+    }
+    coin 1 {
+      on hit { gain self.보존.count 5 }
+    }
+    coin 2 {
+      on hit {
+        apply target 진동 potency 3
+        gain target.진동.count 3
+      }
+    }
+    coin 3 {
+      always { modify damage_pct self.코트 cap 100 }
+      on hit {
+        when self.보존.potency >= 3 {
+          burst target 진동 times 2
+          gain target.진동.count -2
+        } else {
+          burst target 진동
+          gain target.진동.count -1
+        }
+      }
+      note "원문은 두 [적중시] 줄이 나란히 있음. 보존 위력 3 이상이면 1회 + 2회(총 3회)인지, 2회로 대체인지 확인 필요. 현재는 대체로 해석"
+    }
+  }
+
+  skill S3 variant 1 "원 킥 - 쿠튀르 뮐티플" {
+    on use {
+      consume self.보존.count up_to 20 -> n
+      modify damage_pct n cap 20
+      gain self.보존.count 5
+    }
+    on use {
+      consume self.아르뮈르 up_to 60 -> a
+      modify final_power per(a, 30) cap 2
+      modify damage_pct a / 3 cap 20
+    }
+    coin 1 {
+      on hit { gain self.보존.count 5 }
+    }
+    coin 2 {
+      on hit {
+        apply target 진동 potency 3
+        gain target.진동.count 3
+      }
+      on hit when self.보존.potency >= 3 {
+        burst target 진동
+        gain target.진동.count -1
+      }
+    }
+    coin 3 {
+      on hit when self.보존.potency >= 2 {
+        burst target 진동
+        gain target.진동.count -1
+      }
+      on hit { deal target pierce pct(coin.final_damage, 10) }
+    }
+    coin 4 {
+      on hit {
+        burst target 진동
+        gain target.진동.count -1
+      }
+      on hit { deal target pierce pct(coin.final_damage, 15) }
+    }
+  }
+
+  skill DEF "고객 자식! 상품에 주름이 잡히고 있지 않나!" {
+    flag clashable_counter
+    on combat_start {
+      when self.코트 >= 60 {
+        convert self.코트 -> self.아르뮈르 next_turn
+      }
+      when self.아르뮈르 > 0 and self.아르뮈르 < 60 {
+        convert self.아르뮈르 -> self.코트 next_turn
+      }
+      note "원문 '해당 효과가 ~로 변경됨'을 키워드 전환으로 해석. 아르뮈르 0일 때는 전환 대상 없음으로 처리"
+    }
+    on before_use limit 1/turn {
+      when self.아르뮈르 >= 60 {
+        replace this -> S3 variant 1
+        defer attack_end {
+          consume self.아르뮈르 all
+        }
+      }
+    }
+    on use {
+      when self.보존.potency >= 5 {
+        modify coin_power 2
+      } elif self.보존.potency >= 3 {
+        modify coin_power 1
+      }
+    }
+    on use limit 2/turn {
+      gain self.보존.count 2
+    }
+    coin 1 { flag unbreakable }
+    coin 2 {
+      flag unbreakable
+      on hit limit 2/turn { apply target 진동 potency 2 }
+    }
+  }
+
+  passive "되먹임" {
+    requires hold [나태, 오만, 질투] 2
+    on burst(진동) by self {
+      when self.보존.count >= 12 {
+        consume self.보존.count 1
+        modify stagger_damage_pct 30
+      } else {
+        modify stagger_damage_pct 15
+      }
+    }
+    on hit_taken when self.shield > 0 limit 2/turn/target {
+      apply attacker 진동 potency 2
+    }
+  }
+
+  passive "르누아르 개버딘 원단" {
+    on stage_enter {
+      gain self.코트 25
+    }
+    on turn_start {
+      gain self.shield pct(self.max_hp, (self.코트 + self.아르뮈르) / 5)
+      when self.아르뮈르 > 0 {
+        replace S3 -> S3 variant 1 this_turn
+      }
+    }
+  }
+
+  passive "보존" {
+    on consumed(self.보존.count) every 10 {
+      gain self.보존.potency 1
+    }
+    on turn_end when self.보존.potency < 3 {
+      consume self.보존.count all -> n
+      gain self.shield n * 5 next_turn
+    }
+    on gained(self.보존.count) when self.보존.potency >= 3 and self.보존.count < 12 and skill is basic_skill {
+      modify amount 1
+    }
+    on use when skill is basic_attack {
+      when target.진동.potency >= 6 {
+        modify coin_power 1
+      }
+      when self.보존.potency >= 3 {
+        modify coin_power 1
+      }
+      when skill is S3 or skill is S3 variant 1 {
+        modify damage_pct self.보존.potency * 4 cap 20
+      } else {
+        modify damage_pct self.보존.potency * 2 cap 10
+      }
+    }
+  }
+
+  support "르누아르의 미덕과 가치" {
+    requires hold [나태] 6
+    on burst(진동) by pick(allies, where: has(it, 충전) or has_kind(it, special_charge), by: formation, n: 1) when skill is basic_skill {
+      modify stagger_damage_pct 12.5
+    }
+  }
+}
