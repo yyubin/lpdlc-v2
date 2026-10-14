@@ -102,16 +102,15 @@ identity 202 "오트쿠튀르::르누아르 신발관" {
     }
     coin 3 {
       always { modify damage_pct self.코트 cap 100 }
+      # 줄이 다른 [적중시] = 독립된 효과, 적힌 순서대로 발동 → 보존 위력 3 이상이면 총 3회
       on hit {
-        when self.보존.potency >= 3 {
-          burst target 진동 times 2
-          gain target.진동.count -2
-        } else {
-          burst target 진동
-          gain target.진동.count -1
-        }
+        burst target 진동
+        gain target.진동.count -1
       }
-      note "원문은 두 [적중시] 줄이 나란히 있음. 보존 위력 3 이상이면 1회 + 2회(총 3회)인지, 2회로 대체인지 확인 필요. 현재는 대체로 해석"
+      on hit when self.보존.potency >= 3 {
+        burst target 진동 times 2
+        gain target.진동.count -2
+      }
     }
   }
 

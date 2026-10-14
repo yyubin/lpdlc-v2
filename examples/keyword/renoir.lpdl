@@ -28,11 +28,12 @@ keyword "르누아르 개버딘 원단 코트" {
   on turn_end when self.shield > 0 {
     gain self.코트 10
   }
-  on gained(self.보존.count) when ev.source is basic_skill or ev.source is attack {
+  # "자신의 스킬, 패시브 효과로" = by self (패시브 포함, 아군 지원 효과로 얻은 보존은 제외)
+  # ev.amount 는 상한 적용 전 수량 → "보존 횟수 최대치를 초과하여 얻는 수치 포함"
+  on gained(self.보존.count) by self {
     gain self.코트 ev.amount budget 보존연동
-    note "원문 '자신의 스킬, 패시브 효과로' — source 분류에 passive 가 필요. 보존 최대치 초과분 포함"
   }
-  on consumed(self.보존.count) {
+  on consumed(self.보존.count) by self {
     gain self.코트 ev.amount * 2 budget 보존연동
   }
   on gained(self.코트) when self.코트 >= 100 {
