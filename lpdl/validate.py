@@ -248,8 +248,8 @@ class _Validator:
                     self.expr(s.times, scope)
             case A.Deal():
                 self.expr(s.target, scope)
-                if s.damage_type not in V.DAMAGE_TYPES:
-                    self.issue("error", s, scope, f"deal {s.damage_type}: {sorted(V.DAMAGE_TYPES)} 중 하나")
+                if s.damage_type not in V.DAMAGE_TYPES and s.damage_type not in V.SINS:
+                    self.issue("error", s, scope, f"deal {s.damage_type}: {sorted(V.DAMAGE_TYPES)} 또는 죄악 이름")
                 self.expr(s.amount, scope)
             case A.Replace():
                 self.opts(s.opts, s, scope)
@@ -257,6 +257,18 @@ class _Validator:
                 self.ref(s.source, scope, writable=True)
                 self.ref(s.dest, scope, writable=True)
                 self.opts(s.opts, s, scope)
+            case A.ReuseCoin():
+                if not scope.in_coin:
+                    self.issue("error", s, scope, "reuse_coin 은 코인 블록 안에서만")
+                if s.times is not None:
+                    self.expr(s.times, scope)
+            case A.UseSkill():
+                if s.target is not None:
+                    self.expr(s.target, scope)
+            case A.Retype():
+                self.expr(s.target, scope)
+                self.keyword_name(s.source, s, scope)
+                self.keyword_name(s.dest, s, scope)
             case A.Hook():
                 self.issue("review", s, scope, f"hook {s.name}: Python 구현 필요")
                 for a in s.args:
@@ -276,6 +288,8 @@ class _Validator:
             self.expr(o.cap, scope)
         if o.next_turn and o.this_turn:
             self.issue("error", node, scope, "next_turn 과 this_turn 을 함께 쓸 수 없음")
+        if o.to is not None:
+            self.expr(o.to, scope)
         if o.budget and o.budget not in scope.budgets:
             self.issue("error", node, scope, f"budget {o.budget}: 선언되지 않음")
 
@@ -287,16 +301,14 @@ class _Validator:
     def ref(self, r: A.Ref, scope: _Scope, writable=False):
         p = r.path
         root = p[0]
-        if root in scope.locals:
-            if len(p) > 1:
-                self.issue("error", r, scope, f"{'.'.join(p)}: 지역 변수 '{root}' 에는 필드가 없음")
-            elif writable:
+        if root in scope.locals and len(p) == 1:
+            if writable:
                 self.issue("error", r, scope, f"{root}: 지역 변수는 대상이 될 수 없음")
             return
         if root == "it" and not scope.in_pick:
             self.issue("error", r, scope, "it 은 pick(...) 안에서만 사용")
             return
-        if root in V.UNIT_ROOTS:
+        if root in V.UNIT_ROOTS or root in scope.locals:      # 지역 변수에 담긴 유닛 (let a = pick(...)) 도 유닛처럼
             if len(p) == 1:
                 if writable:
                     self.issue("error", r, scope, f"{root}: 필드 또는 키워드 필요 (예: {root}.shield)")
@@ -376,6 +388,19 @@ class _Validator:
         for k in c.kwargs:
             if k not in kw:
                 self.issue("error", c, scope, f"{c.func}(): 알 수 없는 인자 '{k}'")
+        if c.func == "has_affiliation" and len(c.args) == 2:
+            self.expr(c.args[0], scope)
+            if not isinstance(c.args[1], A.Str):
+                self.issue("error", c, scope, 'has_affiliation(): 둘째 인자는 소속 이름 문자열 (예: "르누아르")')
+            return
+        if c.func == "keyword_identity" and len(c.args) == 2:
+            self.expr(c.args[0], scope)
+            a = c.args[1]
+            if not (isinstance(a, A.Ref) and len(a.path) == 1):
+                self.issue("error", c, scope, "keyword_identity(): 둘째 인자는 키워드 이름 하나")
+            else:
+                self.keyword_name(a.path[0], c, scope)
+            return
         if c.func in ("has", "has_kind") and len(c.args) == 2:
             self.expr(c.args[0], scope)
             a = c.args[1]
@@ -391,11 +416,9 @@ class _Validator:
             for i, a in enumerate(c.args):
                 self.expr(a, inner if (c.func == "count_of" and i == 1) else scope)
             for k, v in c.kwargs.items():
-                if k == "by":
-                    if not (isinstance(v, A.Ref) and len(v.path) == 1 and v.path[0] in V.UNIT_FIELDS):
-                        self.issue("error", v, scope, f"pick(by:): 유닛 필드 이름 ({sorted(V.UNIT_FIELDS)})")
-                else:
-                    self.expr(v, inner)
+                if k == "by" and isinstance(v, A.Ref) and len(v.path) == 1 and v.path[0] in V.UNIT_FIELDS:
+                    continue                    # 하위 호환: by: formation
+                self.expr(v, inner)
             return
         for a in c.args:
             self.expr(a, scope)

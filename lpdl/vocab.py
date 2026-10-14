@@ -25,6 +25,7 @@ EVENTS = {
     "head": "[앞면]",
     "tail": "[뒷면]",
     "attack_end": "[공격 종료시]",
+    "combat_end": "전투 종료 시 (턴의 전투 단계 종료)",
     "kill": "[처치시]",
     "hit_taken": "피격 시",
     "stagger": "흐트러짐 시",
@@ -33,6 +34,9 @@ EVENTS = {
     "ally_attack": "아군이 공격 시",
     "ally_hit": "아군 적중 시",
     "ally_dead": "아군 사망 시",
+    "ally_hit_taken": "아군 피격 시 (target = 피격된 아군, attacker = 공격자)",
+    "ally_before_attack": "아군 [공격 시작 전] (target = 그 아군)",
+    "ally_attack_end": "아군 [공격 종료시] (target = 그 아군)",
     # 자원·상태 이벤트 (args 에 대상 키워드/자원)
     "burst": "(진동 등) 폭발 시          on burst(진동)",
     "gained": "자원 획득 시              on gained(self.보존.count)",
@@ -62,20 +66,24 @@ MODIFY_TARGETS = {
 }
 
 DAMAGE_TYPES = {"slash", "pierce", "blunt", "fixed", "stagger", "sanity"}
+# 죄악 속성 피해 ("나태 피해") — deal target 나태 X
 
 # 유닛 필드 (self.X / target.X)
-UNIT_FIELDS = {"hp", "max_hp", "shield", "sanity", "speed", "stagger_gauge", "level", "formation"}
+UNIT_FIELDS = {"hp", "max_hp", "hp_ratio", "shield", "sanity", "speed", "stagger_gauge", "level", "formation"}
 UNIT_ROOTS = {"self", "target", "attacker", "it"}
 GROUP_ROOTS = {"allies", "enemies"}
 SPECIAL_ROOTS = {
-    "ev": {"amount", "source"},
+    "ev": {"amount", "source", "overflow"},    # overflow = 획득량 중 최대치 초과분
     "coin": {"final_damage", "power", "index", "is_head"},
     "skill": set(),                 # skill is basic_attack
+    "team": {"max_resonance", "absolute_resonance"},   # 최대 공명 수, 절대 공명 수
 }
 STATUS_FIELDS = {"potency", "count"}
 
 # `x is C` 의 C
-CATEGORIES = {"basic_attack", "basic_skill", "attack", "defense", "ego", "counter", "evade", "guard"}
+CATEGORIES = {"basic_attack", "basic_skill", "attack", "defense", "ego", "counter", "evade", "guard",
+              "ally", "enemy", "main_target",
+              "slash", "pierce", "blunt"}                   # 공격 유형: skill is slash         # 유닛 분류: target is ally / it is main_target
 
 # 함수: 이름 → (최소 인자 수, 최대 인자 수, 허용 kwargs)
 FUNCS = {
@@ -88,10 +96,14 @@ FUNCS = {
     "has": (2, 2, set()),           # has(unit, 키워드)
     "has_kind": (2, 2, set()),      # has_kind(unit, special_charge)
     "count_of": (2, 2, set()),      # count_of(allies, where-식)
-    "pick": (1, 1, {"where", "by", "n", "desc"}),   # pick(allies, where: has(it, 충전), by: formation, n: 1)
+    "has_affiliation": (2, 2, set()),   # has_affiliation(it, "르누아르")   "르누아르 소속"
+    "keyword_identity": (2, 2, set()),  # keyword_identity(it, 충전)        "충전 인격" (인격 키워드 분류)
+    # pick(allies, where: it != self, prefer: keyword_identity(it, 충전), by: it.hp_ratio, n: 1)
+    #   by = 정렬 기준 식 (오름차순, desc: 1 이면 내림차순), prefer = 먼저 고를 조건
+    "pick": (1, 1, {"where", "by", "n", "desc", "prefer"}),
 }
 
-FLAGS = {"clashable_counter", "unbreakable", "reuse", "aoe", "unclashable", "fixed_target"}   # unclashable=[합 불가능], fixed_target=[대상 변경 불가]
+FLAGS = {"clashable_counter", "unbreakable", "reuse", "aoe", "unclashable", "fixed_target", "ally_target"}   # unclashable=[합 불가능], fixed_target=[대상 변경 불가], ally_target=아군 지정 가능 (양극성)
 
 KEYWORD_KINDS = {"status", "charge", "special_charge", "value"}
 KEYWORD_PROPS = {"kind", "max", "count_max", "potency_max", "inherit"}

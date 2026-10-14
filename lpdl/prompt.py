@@ -49,16 +49,23 @@ replace this|<슬롯> [variant N] -> <슬롯> [variant N] [옵션]   # "~로 발
 convert <참조> -> <참조> [옵션]             # 키워드 전환
 when 조건 { ... } elif 조건 { ... } else { ... }      # "대신" = else
 defer <event> { ... }                      # 이번 사용 중 나중 시점 ("이 효과가 발동했으면 공격 종료 시 ...")
-옵션: cap 식 | next_turn | this_turn | coins all|first|last|current|N | budget 이름
+reuse_coin [times 식]                      # "이 코인 재사용" (코인 블록 안에서만, 횟수 제한은 블록 limit)
+use_skill <슬롯> [variant N] [on 대상식]    # 다른 스킬을 추가로 발동 ("~ 발동", 추가 공격)
+retype <대상식> <키워드> -> <키워드>         # 상태 유형 변경, 위력·횟수 유지 ("진동 - 보존으로 진폭 변환")
+옵션: cap 식 | next_turn | this_turn | coins all|first|last|current|N | budget 이름 | to 대상식
+      to = 오라: 이 효과를 다른 유닛(들)에게 적용. 예) always { modify def_level 2 to pick(allies, where: has_affiliation(it, "르누아르")) }
 
 ## 참조와 식
 유닛: self target attacker it(pick/count_of 안에서만)
 유닛 필드: ${unit_fields}
 키워드: self.<키워드>.potency / .count (status·charge 계열), self.<키워드> (value 계열). 공백 있는 이름은 use 별칭
-이벤트 값: ev.amount ev.source (gained/consumed/applied/burst 안에서만)
+이벤트 값: ev.amount ev.source ev.overflow(획득량 중 최대치 초과분) (gained/consumed/applied/burst 안에서만)
+팀: team.max_resonance (최대 공명 수), team.absolute_resonance
 코인: coin.final_damage coin.power coin.index coin.is_head (코인 블록 안에서만)
-분류: skill is <분류> | skill is S3 [variant 1]
-그룹: allies enemies → pick(allies, where: 조건, by: 유닛필드, n: 1, desc: 1), count_of(allies, 조건)
+분류: skill is <분류> | skill is S3 [variant 1] | target is ally | target is enemy | it is main_target
+유닛 비교: it != self, target == self
+그룹: allies enemies → pick(allies, where: 조건, prefer: 우선 조건, by: 정렬식, n: 1, desc: 1), count_of(allies, 조건)
+      pick 은 by 오름차순 정렬(desc: 1 이면 내림차순), prefer 를 만족하는 유닛을 먼저 고른다. n: 1 이면 유닛 하나, 아니면 목록
 연산: + - * / >= <= == != > < and or not, 괄호, 숫자, "문자열", [목록]
 함수: ${funcs}
 
@@ -68,7 +75,7 @@ ${events}
 코인 블록에서 쓸 수 있는 event: ${coin_events}
 modify 대상 (이름: 의미):
 ${modify}
-피해 유형: ${damage}
+피해 유형: ${damage}, 또는 죄악 이름(분노 색욕 나태 탐식 우울 오만 질투) = 그 속성 피해
 분류(is): ${categories}
 flag: ${flags}
 죄악: ${sins}
@@ -93,6 +100,14 @@ R5. 스킬 효과의 "해당 효과가 ~로 변경됨"은 그 인격의 키워�
 - "(최대 K)" = cap K. "X n당" = per(X, n). "X의 p%" = pct(X, p). "소모한 수치만큼" = consume ... -> 변수.
 - "[합 불가능]" = flag unclashable, "[대상 변경 불가]" = flag fixed_target, "파괴 불가 코인" = 코인에 flag unbreakable,
   "[합 가능 반격]" = flag clashable_counter.
+- 자주 쓰는 표현:
+  "르누아르 소속 아군" = has_affiliation(it, "르누아르") · "충전 인격" = keyword_identity(it, 충전) (인격의 키워드 분류. 현재 보유 여부는 has)
+  "자신을 제외한" = where: it != self · "대상이 아군이면" = when target is ally · "메인 타겟" = it is main_target
+  "현재 체력 비율이 가장 낮은 아군" = pick(allies, by: it.hp_ratio, n: 1) · "속도가 가장 빠른" = by: it.speed, desc: 1
+  "충전 횟수가 가장 적은" = by: it.충전.count · "(충전 인격 우선)" = prefer: keyword_identity(it, 충전)
+  "편성 순서가 가장 빠른" = by: it.formation · "최대 공명 수 1당" = per(team.max_resonance, 1)
+  "나태 피해 X" = deal target 나태 X · "아군 피격 시" = on ally_hit_taken · "아군이 공격하기 전" = on ally_before_attack
+  "다른 유닛에게 거는 상시 효과(오라)" = always { modify ... to 대상 }
 - 고정 어휘로 표현할 수 없으면: 효과의 일부라도 정확히 쓸 수 있으면 쓰고, 나머지는 hook(엔진 구현) 또는 unparsed(해석 불가)로 남긴다.
   어휘를 지어내지 않는다.
 - 이 인격의 키워드 중 아래 [이미 정의된 키워드]에 없고 고유 메커니즘이 있는 것(수치형, 특수 충전 등)은 같은 출력 안에

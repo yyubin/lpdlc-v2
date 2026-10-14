@@ -283,6 +283,18 @@ class _ToAST(Transformer):
         args = ch[1][1] if len(ch) > 1 else []
         return A.Hook(line=_line(meta), name=str(ch[0]), args=args)
 
+    def reuse_stmt(self, meta, ch):
+        return A.ReuseCoin(line=_line(meta), times=ch[0] if ch else None)
+
+    def use_skill_stmt(self, meta, ch):
+        return A.UseSkill(line=_line(meta), skill=ch[0], target=ch[1] if len(ch) > 1 else None)
+
+    def use_on(self, meta, ch):
+        return ch[0]
+
+    def retype_stmt(self, meta, ch):
+        return A.Retype(line=_line(meta), target=ch[0], source=str(ch[1]), dest=str(ch[2]))
+
     def unparsed_stmt(self, meta, ch):
         return A.Unparsed(line=_line(meta), text=_text(ch[0]), reason=ch[1] if len(ch) > 1 else None)
 
@@ -303,6 +315,9 @@ class _ToAST(Transformer):
 
     def opt_budget(self, meta, ch):
         return _Opt("budget", str(ch[0]))
+
+    def opt_to(self, meta, ch):
+        return _Opt("to", ch[0])
 
     def skill_ref(self, meta, ch):
         return A.SkillRef(line=_line(meta), slot=str(ch[0]), variant=ch[1] if len(ch) > 1 else 0)

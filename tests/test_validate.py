@@ -90,3 +90,38 @@ def test_requires_sins():
 def test_notes_are_review_items_not_errors():
     rep = validate(parse("lpdl 2\n" + skill('on use { note "확인 필요" \n unparsed """원문""" reason "모름" }')))
     assert rep.ok and len(rep.of("review")) == 2
+
+
+# ── 어휘 확장 (첫 컴파일 결과 반영) ──
+def test_extended_vocab_is_valid():
+    src = skill(
+        'on use when target is ally { modify coin_power 1 } '
+        'on use { let a = pick(allies, where: it != self and has_affiliation(it, "르누아르"), '
+        'prefer: keyword_identity(it, 충전), by: it.hp_ratio, n: 1) \n apply a 진동 potency 1 } '
+        'on use { modify final_power per(team.max_resonance, 1) cap 4 coins last } '
+        'always { modify def_level 2 to pick(allies, where: has_affiliation(it, "르누아르")) } '
+        'coin 1 { on hit limit 1/use { reuse_coin } on hit { deal target 나태 pct(coin.final_damage, 10) '
+        '\n use_skill S1 variant 1 on target \n retype target 진동 -> 진동 } } '
+        'on ally_hit_taken when target.shield > 0 { gain self.충전.count 1 } '
+        'on combat_end { gain self.shield 1 }'
+    )
+    assert errors(src) == []
+
+
+@pytest.mark.parametrize("body, needle", [
+    ("on use { reuse_coin }", "reuse_coin"),
+    ('on use when has_affiliation(target, 르누아르) { modify coin_power 1 }', "소속 이름 문자열"),
+    ("on use when keyword_identity(target, 없는것) { modify coin_power 1 }", "알 수 없는 키워드"),
+    ("on use { deal target 탐욕 3 }", "죄악 이름"),
+    ("on use { modify coin_power team.resonance }", "알 수 없는 필드"),
+])
+def test_extended_vocab_rejects(body, needle):
+    msgs = errors(skill(body))
+    assert any(needle in m for m in msgs), msgs
+
+
+def test_local_unit_fields():
+    """let a = pick(...) 로 고른 유닛의 필드·키워드 참조."""
+    assert errors(skill("on use { let a = pick(allies, by: it.hp_ratio, n: 1) \n gain a.shield 10 \n"
+                        " gain a.충전.count 2 }")) == []
+    assert any("유닛 필드도 키워드도 아님" in m for m in errors(skill("on use { let a = 1 \n gain a.없음 1 }")))

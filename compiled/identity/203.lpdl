@@ -1,6 +1,6 @@
 lpdl 2
 
-# 로쟈 — 오트쿠튀르::수선실 고유 키워드
+# 로쟈 계열 인격 고유 키워드 (원문: 게임 키워드 사전)
 
 keyword "표류 관성" {
   prop kind special_charge
@@ -13,38 +13,34 @@ keyword "표류 관성" {
 }
 
 keyword "두 가위" {
-  prop kind status
+  prop kind value
   prop max 1
   use 두가위 = "두 가위"
-  note "수치가 하나뿐인 상태 → potency 로 표현, 최댓값 1"
   always {
     modify atk_level 3
     modify def_level 3
   }
-  on use limit 1/turn {
-    text """충전 인격이면, 스킬 사용시 정신력 5 회복(턴당 1회)"""
-    hook gain_sanity_if_charge_identity(self, 5)
-    note "'충전 인격'은 인격의 키워드 분류이며 현재 보유 여부와 다름 → 고정 어휘의 식으로 판정 불가, hook"
+  on use when keyword_identity(self, 충전) limit 1/turn {
+    gain self.sanity 5
   }
   on hit when skill is basic_skill {
     text """기본 스킬 적중시, 해당 코인 최종 피해량의 5%만큼 참격 피해"""
-    hook deal_pct_of_coin_final_damage("slash", 5)
-    note "coin.final_damage 는 코인 블록 안에서만 참조 가능 → 키워드 블록에서는 hook"
+    hook hit_coin_final_damage_extra("slash", 5)
+    note "coin.final_damage 는 코인 블록 안에서만 쓸 수 있어 키워드 블록에서는 엔진 구현으로 넘김"
   }
   on turn_end {
-    consume self.두가위.potency all
+    consume self.두가위 all
+    note "턴 종료 시 소멸"
   }
 }
 
 keyword "마름질 표식" {
-  prop kind status
+  prop kind value
   prop max 2
-  use 마름질 = "마름질 표식"
-  note "수치가 하나뿐인 상태 → potency 로 표현, 최댓값 2"
   on dead limit 3/turn {
     text """이 효과를 보유한 대상이 사망 시, 이 효과 부여자가 정신력을 5 회복하고 다음 턴에 공격 레벨 증가 1 얻음(턴당 3회)"""
-    hook reward_mark_applier(5, "공격 레벨 증가", 1)
-    note "'이 효과 부여자'를 가리킬 유닛 참조가 없음 → hook. 정신력 5 회복(즉시), 공격 레벨 증가 1(다음 턴). 턴당 3회 제한은 부여자 기준"
+    hook reward_mark_applier(5, 1)
+    note "부여자 참조는 고정 어휘에 없음 → 엔진 구현. 턴당 3회는 부여자 기준 상한으로 해석"
   }
 }
 
@@ -61,29 +57,28 @@ identity 203 "오트쿠튀르::수선실" {
   use 표류 = "표류 관성"
   use 두가위 = "두 가위"
   use 마름질 = "마름질 표식"
-  use 공레증 = "공격 레벨 증가"
-  use 공위증 = "공격 위력 증가"
+  use 공레 = "공격 레벨 증가"
+  use 공위 = "공격 위력 증가"
 
   skill S1 "르투슈(Retouche)" {
     flag unclashable
     flag fixed_target
+    flag ally_target
+    note "양극성 = 아군 지정 가능(flag ally_target). 자동 지정 시 편성 순서가 가장 빠른 아군 우선, 아군 대상이면 비적중·수비 미발동, 전투 시작 시 발동 → 엔진의 양극성 처리"
     always {
       text """양극성"""
-      hook bipolar_targeting
-      note "양극성: 아군 지정 가능, 자동 지정·일반 전투 시 편성 순서가 가장 빠른 아군 우선, 아군 대상이면 적중·수비 스킬 발동 없음, 아군 지정 시 전투 시작 시 발동 → 대상 지정 규칙이라 hook"
+      hook polarity()
     }
-    on attack_end when count_of(allies, it == target) > 0 {
-      text """[공격 종료시] 대상이 아군이면, 충전 횟수 4, 공격 레벨 증가 1 부여"""
+    on attack_end when target is ally {
       gain target.충전.count 4
-      apply target 공레증 potency 1
-      note "'충전 횟수 4 부여' = 대상의 충전 횟수 4 증가로 해석. '대상이 아군' = count_of(allies, it == target) > 0"
+      apply target 공레 potency 1
     }
-    on attack_end when count_of(allies, it == target) > 0 limit 2/turn {
-      text """[공격 종료시] 대상이 아군이면 아래 효과 발동 (턴당 2회)"""
-      gain target.shield max(pct(self.max_hp, 10), 1)
+    on attack_end when target is ally limit 2/turn {
+      gain self.shield max(pct(self.max_hp, 10), 1) to target
       apply target 두가위 potency 1
-      hook apply_if_charge_identity(target, "공격 위력 증가", 2)
-      note "'대상이 충전 인격이면'은 인격 분류 판정이라 식으로 표현 불가 → hook"
+      when keyword_identity(target, 충전) {
+        apply target 공위 potency 2
+      }
     }
   }
 
@@ -94,30 +89,34 @@ identity 203 "오트쿠튀르::수선실" {
     }
     coin 1 {
       on hit when self.표류.potency >= 3 limit 1/use {
-        text """[적중시] 자신의 표류 관성 위력이 3 이상이면, 이 코인 재사용 (스킬당 1회)"""
-        hook reuse_this_coin
-        note "조건부 재사용은 무조건 flag reuse 로 표현 불가 → hook"
+        reuse_coin
       }
-      on hit {
-        gain target.진동.count 1
-      }
-      on hit {
-        apply target 마름질 potency 1
-      }
+      on hit { gain target.진동.count 1 }
+      on hit { apply target 마름질 potency 1 }
     }
   }
 
   skill S2 "고정 그리고 패턴 따라 재단" {
     on combat_start limit 1/turn {
-      text """[전투 시작시] 자신과 자신을 제외한 편성 순서가 가장 빠른 아군 (충전 인격 우선) 1명, 현재 체력 비율이 가장 낮은 아군 1명에게 공격 레벨 증가 2, 자신의 최대 체력의 5%만큼 보호막 부여 (최소 1. 턴당 1회)
-- 충전 인격이면 공격 레벨 증가 1, 자신의 최대 체력의 5%만큼 보호막 추가 부여"""
-      let sh = max(pct(self.max_hp, 5), 1)
-      apply self 공레증 potency 2
-      gain self.shield sh
-      hook apply_if_charge_identity(self, "공격 레벨 증가", 1)
-      hook shield_if_charge_identity(self, sh)
-      hook tailor_ally_buff_s2(sh)
-      note "아군 2명 선택(충전 인격 우선 편성 순서, 현재 체력 비율)은 pick 으로 표현 불가 → hook. 각 아군에게 공격 레벨 증가 2 + 보호막 sh, 충전 인격이면 공격 레벨 증가 1 + 보호막 sh 추가. '자신을 제외한'은 두 선택 모두에 적용, '최소 1'은 추가 보호막에도 적용한 것으로 해석"
+      text """[전투 시작시] 자신과 자신을 제외한 편성 순서가 가장 빠른 아군 (충전 인격 우선) 1명, 현재 체력 비율이 가장 낮은 아군 1명에게 공격 레벨 증가 2, 자신의 최대 체력의 5%만큼 보호막 부여 (최소 1. 턴당 1회)"""
+      note "'자신을 제외한'은 두 아군 선택 모두에 걸리는 것으로 해석. 두 선택이 같은 아군이어도 원문대로 각각 적용"
+      let a = pick(allies, where: it != self, prefer: keyword_identity(it, 충전), by: it.formation, n: 1)
+      let b = pick(allies, where: it != self, by: it.hp_ratio, n: 1)
+      let x = max(pct(self.max_hp, 5), 1)
+      apply [self, a, b] 공레 potency 2
+      gain self.shield x to [self, a, b]
+      when keyword_identity(self, 충전) {
+        apply self 공레 potency 1
+        gain self.shield x
+      }
+      when keyword_identity(a, 충전) {
+        apply a 공레 potency 1
+        gain self.shield x to a
+      }
+      when keyword_identity(b, 충전) {
+        apply b 공레 potency 1
+        gain self.shield x to b
+      }
     }
     on use {
       modify coin_power per(target.진동.potency, 6) cap 2
@@ -141,8 +140,8 @@ identity 203 "오트쿠튀르::수선실" {
       }
       on hit limit 1/turn {
         text """[적중시] 나태 내성 약화 1 부여 (턴당 1회)"""
-        hook apply_status(target, "나태 내성 약화", 1)
-        note "'나태 내성 약화'는 정의된 키워드 목록에 없음 → 지어내지 않고 hook 으로 부여"
+        hook apply_named_status("나태 내성 약화", 1)
+        note "'나태 내성 약화'가 키워드 어휘에 없어 부여를 엔진 구현으로 넘김"
       }
     }
   }
@@ -156,7 +155,8 @@ identity 203 "오트쿠튀르::수선실" {
       gain self.표류.count 5
     }
     on attack_end {
-      consume target.마름질.potency 2
+      consume target.마름질 2
+      note "'2 소모'를 문자 그대로 옮김. 이 스킬은 대상의 마름질 표식이 2 이상일 때만 발동되므로 실질 차이 없음"
     }
     on attack_end {
       gain self.꽃가위 1
@@ -178,11 +178,11 @@ identity 203 "오트쿠튀르::수선실" {
     }
     on combat_start limit 1/turn {
       text """[전투 시작시] 자신과 자신을 제외한 편성 순서가 가장 빠른 아군 (충전 인격 우선) 1명, 현재 체력 비율이 가장 낮은 아군 1명에게 두 가위 1을 부여하고, 자신의 최대 체력의 10%만큼 보호막 부여 (최소 1. 턴당 1회)"""
-      let sh = max(pct(self.max_hp, 10), 1)
-      apply self 두가위 potency 1
-      gain self.shield sh
-      hook tailor_ally_buff_s3(sh)
-      note "아군 2명 선택(충전 인격 우선 편성 순서, 현재 체력 비율)은 pick 으로 표현 불가 → hook. 각 아군에게 두 가위 1 + 보호막 sh. '자신을 제외한'은 두 선택 모두에 적용한 것으로 해석"
+      note "'자신을 제외한'은 두 아군 선택 모두에 걸리는 것으로 해석"
+      let a = pick(allies, where: it != self, prefer: keyword_identity(it, 충전), by: it.formation, n: 1)
+      let b = pick(allies, where: it != self, by: it.hp_ratio, n: 1)
+      apply [self, a, b] 두가위 potency 1
+      gain self.shield max(pct(self.max_hp, 10), 1) to [self, a, b]
     }
     on use {
       modify coin_power per(target.진동.potency, 6) cap 2
@@ -226,11 +226,9 @@ identity 203 "오트쿠튀르::수선실" {
       gain self.표류.count 5
     }
     on combat_start limit 1/turn {
-      text """[전투 시작시] 자신과 자신을 제외한 현재 체력 비율이 가장 낮은 아군 2명에게 자신의 최대 체력의 10%만큼 보호막 부여 (최소 1. 턴당 1회)"""
-      let sh = max(pct(self.max_hp, 10), 1)
-      gain self.shield sh
-      hook tailor_ally_shield_def(sh)
-      note "현재 체력 비율 기준 선택은 pick(by: 유닛필드)으로 표현 불가 → hook. 자신을 제외한 체력 비율 최저 아군 2명에게 보호막 sh"
+      let c = pick(allies, where: it != self, by: it.hp_ratio, n: 2)
+      gain self.shield max(pct(self.max_hp, 10), 1) to [self, c]
+      note "자신 + 자신을 제외한 현재 체력 비율이 가장 낮은 아군 2명"
     }
     on use {
       modify clash_power per(self.표류.count, 5) cap 4
@@ -260,24 +258,24 @@ identity 203 "오트쿠튀르::수선실" {
     on consumed(self.표류.count) every 10 {
       gain self.표류.potency 1
     }
-    on attack_end by pick(allies, where: it != self and has(it, 두가위)) limit 1/turn {
+    on ally_attack_end when target != self and has(target, 두가위) limit 1/turn {
       text """자신을 제외한 두 가위를 보유한 아군의 공격 종료시 대상에게 '패턴 따기' 발동 (턴당 1회)"""
-      hook trigger_skill(self, "S1 variant 1", target)
-      note "pick 에 n 을 생략 = 조건을 만족하는 아군 전원. target = 공격을 마친 아군의 대상. 추가 스킬 발동은 고정 어휘에 없음 → hook"
+      hook use_skill_on_ally_attack_target("S1", 1)
+      note "ally_attack_end 의 target 은 그 아군이라 아군이 공격한 대상을 참조할 수 없음 → 엔진 구현 (S1 variant 1 '패턴 따기' 발동)"
     }
-    on before_use when skill is S1 variant 1 and target.마름질.potency >= 2 limit 1/turn {
+    on before_use when skill is S1 variant 1 and target.마름질 >= 2 limit 1/turn {
       text """- [사용전] 발동 대상의 마름질 표식이 2 이상이면 대신 '오려내기'로 발동 (턴당 1회)"""
       replace this -> S2 variant 1
-      note "위 효과로 발동되는 '패턴 따기'의 [사용전] 시점 효과라 별도 블록으로 분리"
+      note "패턴 따기는 덱에 없고 이 패시브로만 발동되므로 skill is S1 variant 1 로 한정"
     }
   }
 
   support "한 가위" {
     requires hold [나태] 4
-    on use by pick(allies, by: speed, n: 1, desc: 1) when skill is basic_skill {
+    on use by pick(allies, by: it.speed, desc: 1, n: 1) when skill is basic_skill {
       text """속도가 가장 빠른 아군 1명의 참격 기본 스킬 피해량 +10%"""
-      hook damage_pct_if_skill_damage_type("slash", 10)
-      note "스킬 피해 유형(참격) 판정은 skill is 분류에 없음 → hook"
+      hook damage_pct_if_attack_type("slash", 10)
+      note "스킬 공격 유형(참격) 분류가 고정 어휘에 없어 참격 조건과 피해량 증가를 엔진 구현으로 넘김"
     }
   }
 }

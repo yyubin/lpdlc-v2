@@ -65,6 +65,9 @@ body: "{" stmt* "}"
      | convert_stmt
      | defer_stmt
      | hook_stmt
+     | reuse_stmt
+     | use_skill_stmt
+     | retype_stmt
      | unparsed_stmt
      | note_stmt
 
@@ -92,6 +95,10 @@ replace_stmt: "replace" skill_target "->" skill_ref stmt_opt*   // replace S3 ->
 convert_stmt: "convert" ref "->" ref stmt_opt*              // convert self.코트 -> self.아르뮈르 next_turn
 defer_stmt: "defer" NAME body                               // defer attack_end { ... }
 hook_stmt: "hook" NAME event_args?
+reuse_stmt: "reuse_coin" times?                             // 이 코인 재사용
+use_skill_stmt: "use_skill" skill_ref use_on?               // 다른 스킬 발동 (추가 공격)
+use_on: "on" expr
+retype_stmt: "retype" expr NAME "->" NAME                   // 진폭 변환: 상태 유형 변경 (위력·횟수 유지)
 unparsed_stmt: "unparsed" TEXT reason?
 reason: "reason" STRING
 note_stmt: "note" STRING
@@ -101,6 +108,7 @@ note_stmt: "note" STRING
          | "this_turn"    -> opt_this_turn
          | "coins" COIN_SEL -> opt_coins
          | "budget" NAME  -> opt_budget
+         | "to" expr      -> opt_to                         // 다른 유닛에 적용 (오라): modify def_level 2 to allies
 COIN_SEL: "all" | "first" | "last" | "current" | /\d+/
 
 skill_ref: SLOT variant?

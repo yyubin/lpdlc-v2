@@ -88,6 +88,7 @@ class StmtOpts(BaseModel):
     this_turn: bool = False
     coins: str | None = None            # all | first | last | current | "3"
     budget: str | None = None
+    to: Expr | None = None              # 오라: 다른 유닛(들)에 적용
 
 
 # ── 문장 ─────────────────────────────────────────────────────────────────────
@@ -173,6 +174,24 @@ class Hook(Node):
     args: list[Expr] = []
 
 
+class ReuseCoin(Node):
+    kind: Literal["reuse_coin"] = "reuse_coin"
+    times: Expr | None = None
+
+
+class UseSkill(Node):
+    kind: Literal["use_skill"] = "use_skill"
+    skill: SkillRef
+    target: Expr | None = None
+
+
+class Retype(Node):
+    kind: Literal["retype"] = "retype"
+    target: Expr
+    source: str
+    dest: str
+
+
 class Unparsed(Node):
     kind: Literal["unparsed"] = "unparsed"
     text: str
@@ -193,7 +212,7 @@ class Defer(Node):
 
 Stmt = Annotated[
     Union[Text, Note, Let, Gain, Apply, Consume, Modify, Burst, Deal, Replace, Convert,
-          Hook, Unparsed, When, Defer],
+          Hook, ReuseCoin, UseSkill, Retype, Unparsed, When, Defer],
     Field(discriminator="kind"),
 ]
 
@@ -282,5 +301,5 @@ class Document(BaseModel):
 
 
 for _m in (Call, BinOp, Unary, Is, ListExpr, StmtOpts, Gain, Apply, Consume, Modify, Burst, Deal,
-           Hook, When, Defer, On, Always, Coin, Skill, Passive, KeywordDecl, Identity, Document, Let):
+           Hook, ReuseCoin, UseSkill, Retype, When, Defer, On, Always, Coin, Skill, Passive, KeywordDecl, Identity, Document, Let):
     _m.model_rebuild()
