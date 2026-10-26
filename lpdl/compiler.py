@@ -14,7 +14,7 @@ from typing import Protocol
 
 from . import ast as A
 from .parser import LPDLSyntaxError, parse
-from .prompt import EXAMPLES, feedback_prompt, system_prompt, user_prompt
+from .prompt import EXAMPLES, ROOT, feedback_prompt, system_prompt, user_prompt
 from .validate import validate
 
 DEFAULT_MODEL = "claude-opus-5-5"
@@ -132,7 +132,7 @@ def extract_lpdl(text: str) -> str:
 
 def _known_keyword_docs() -> A.Document:
     from . import load
-    return load([EXAMPLES / "keyword"])
+    return load([ROOT / "keywords", EXAMPLES / "keyword"])   # 표준 상태 + 예시 고유 키워드
 
 
 def check(code: str, identity_id: int, outline: dict | None = None) -> tuple[A.Document | None, list[str], list[str]]:

@@ -1,0 +1,74 @@
+lpdl 2
+
+# 표준 상태 키워드. 원문: gesellschaft keyword 테이블 (baslimbus keyword_dict)
+# 엔진은 원시 동작(피해·흐트러짐·진동 폭발·치명타 판정)만 갖고, 언제 받고 언제 줄어드는지는 여기서 정한다.
+# 위력은 저절로 줄지 않는다. 횟수가 0이 되면 상태가 사라진다 (charge 계열 제외).
+# 블록 안의 self = 상태를 가진 유닛.
+
+keyword "출혈" {
+  prop kind status
+  # "공격 스킬의 코인 판정 시, 효과 위력만큼 고정 체력 피해를 받음. 공격 스킬의 코인 판정 후 횟수 1 감소"
+  # coin_flip 은 행동 중인 유닛에게만 발생 → 출혈을 가진 유닛이 공격할 때 코인마다
+  on coin_flip {
+    deal self fixed self.출혈.potency
+    gain self.출혈.count -1
+  }
+}
+
+keyword "화상" {
+  prop kind status
+  # "턴 종료 시, 효과 위력만큼 고정 피해를 받고 횟수 1 감소"
+  on turn_end {
+    deal self fixed self.화상.potency
+    gain self.화상.count -1
+  }
+}
+
+keyword "진동" {
+  prop kind status
+  # "진동 폭발 공격로 피격 시, 효과 위력만큼 흐트러짐 손상. 턴 종료 후 횟수 1 감소"
+  # 폭발 자체는 burst 문장 → 엔진 원시 동작
+  on turn_end {
+    gain self.진동.count -1
+  }
+}
+
+keyword "파열" {
+  prop kind status
+  # "공격 스킬로 피격 시, 효과 위력만큼 고정 체력 피해를 받음. 피격 후 횟수 1 감소"
+  on hit_taken {
+    deal self fixed self.파열.potency
+    gain self.파열.count -1
+  }
+}
+
+keyword "침잠" {
+  prop kind status
+  # "공격 스킬로 피격 시, 효과 위력만큼 고정 정신력 피해를 받음 (정신력이 없는 대상에게는 우울 속성 피해로 적용됨)
+  #  피격 후 횟수 1 감소" — 정신력 없는 대상의 우울 피해 전환은 엔진의 sanity 피해 처리
+  on hit_taken {
+    deal self sanity self.침잠.potency
+    gain self.침잠.count -1
+  }
+}
+
+keyword "호흡" {
+  prop kind status
+  # "적중 시 효과 위력에 비례한 확률로 치명타 피해를 입힘. 턴 종료 시, 치명타 발동 후 횟수 1 감소"
+  # 치명타 확률·피해는 엔진 원시 동작 (M1 미구현 → crit 이벤트가 아직 발생하지 않음)
+  on crit {
+    gain self.호흡.count -1
+  }
+  on turn_end {
+    gain self.호흡.count -1
+  }
+}
+
+keyword "충전" {
+  prop kind charge
+  prop count_max 20
+  # "소모 시 특정 스킬의 위력이 상승함. 최대 20까지 얻을 수 있음. 턴 종료 시 1 감소"
+  on turn_end {
+    gain self.충전.count -1
+  }
+}
