@@ -69,7 +69,8 @@ DAMAGE_TYPES = {"slash", "pierce", "blunt", "fixed", "stagger", "sanity"}
 # 죄악 속성 피해 ("나태 피해") — deal target 나태 X
 
 # 유닛 필드 (self.X / target.X)
-UNIT_FIELDS = {"hp", "max_hp", "hp_ratio", "shield", "sanity", "speed", "stagger_gauge", "level", "formation"}
+UNIT_FIELDS = {"hp", "max_hp", "hp_ratio", "shield", "sanity", "has_sanity", "speed", "stagger_gauge", "level", "formation"}
+# has_sanity: 정신력이 있는 유닛이면 1 (정신력 없는 적은 0)
 UNIT_ROOTS = {"self", "target", "attacker", "it"}
 GROUP_ROOTS = {"allies", "enemies"}
 SPECIAL_ROOTS = {

@@ -9,7 +9,8 @@ keyword "출혈" {
   prop kind status
   # "공격 스킬의 코인 판정 시, 효과 위력만큼 고정 체력 피해를 받음. 공격 스킬의 코인 판정 후 횟수 1 감소"
   # coin_flip 은 행동 중인 유닛에게만 발생 → 출혈을 가진 유닛이 공격할 때 코인마다
-  on coin_flip {
+  # 공격 스킬만: 방어·회피·반격·강화반격(DEF 슬롯 전부)은 발동하지 않음 (사용자 확인 2026-10-26)
+  on coin_flip when skill is attack {
     deal self fixed self.출혈.potency
     gain self.출혈.count -1
   }
@@ -45,9 +46,13 @@ keyword "파열" {
 keyword "침잠" {
   prop kind status
   # "공격 스킬로 피격 시, 효과 위력만큼 고정 정신력 피해를 받음 (정신력이 없는 대상에게는 우울 속성 피해로 적용됨)
-  #  피격 후 횟수 1 감소" — 정신력 없는 대상의 우울 피해 전환은 엔진의 sanity 피해 처리
+  #  피격 후 횟수 1 감소" — 우울 피해 전환은 침잠 고유 효과 (일반 정신력 피해는 전환되지 않음)
   on hit_taken {
-    deal self sanity self.침잠.potency
+    when self.has_sanity {
+      deal self sanity self.침잠.potency
+    } else {
+      deal self 우울 self.침잠.potency
+    }
     gain self.침잠.count -1
   }
 }
