@@ -62,6 +62,7 @@ MODIFY_TARGETS = {
     "speed_max": "속도 최댓값",
     "taunt": "도발치",
     "heads_prob": "앞면 확률 (%p)",
+    "crit_chance": "치명타 확률 (%p)",
     "amount": "이벤트 수량 (gained/consumed/applied 안에서만)",
 }
 

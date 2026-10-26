@@ -73,7 +73,7 @@ keyword "보존" { prop kind special_charge  prop count_max 20  prop inherit "�
 | `gain ref 식` | 자원·필드 증감 (음수 = 감소). `self.shield`, `self.보존.count`, `self.코트` |
 | `apply 대상 키워드 potency 식 [count 식]` | 상태 부여 |
 | `consume ref N \| up_to N \| all [-> 변수]` | 소모. `N` = 부족하면 소모 안 함(0), `up_to` = 있는 만큼 |
-| `modify 대상 식` | 공식 항 수정 (`vocab.MODIFY_TARGETS`) |
+| `modify 대상 식` | 공식 항 수정 (`vocab.MODIFY_TARGETS`, 치명타 확률은 `crit_chance`) |
 | `burst 대상 키워드 [times 식]` | 진동 폭발 등 |
 | `deal 대상 slash\|pierce\|blunt\|fixed\|stagger\|sanity 식` | 추가 피해 |
 | `replace this\|슬롯 -> 슬롯 [variant N]` | 스킬 교체 ("~로 발동됨", "~로 적용됨") |
