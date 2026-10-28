@@ -16,6 +16,10 @@ keyword "진동 - 보존" {
     gain self.진보.count -1
     note "폭발 출처(ev.source)가 르누아르 소속이면 횟수 감소 없음. 스킬·패시브 모두 해당 (R3)"
   }
+  on turn_end {
+    gain self.진보.count -1
+    note "턴 종료 후 횟수 1 감소 — 진동과 같음 (inherit 는 부모 정의의 블록을 물려받지 않아 직접 적음)"
+  }
 }
 
 keyword "보존 신역" {
