@@ -77,7 +77,7 @@ UNIT_ROOTS = {"self", "target", "attacker", "it"}
 GROUP_ROOTS = {"allies", "enemies"}
 SPECIAL_ROOTS = {
     "ev": {"amount", "source", "overflow"},    # overflow = 획득량 중 최대치 초과분
-    "coin": {"final_damage", "power", "index", "is_head"},
+    "coin": {"final_damage", "power", "index", "is_head", "is_last"},   # is_last = 이번 공격의 마지막 코인
     "skill": set(),                 # skill is basic_attack
     "team": {"max_resonance", "absolute_resonance"},   # 최대 공명 수, 절대 공명 수
 }

@@ -370,10 +370,10 @@ identity 204 "오트쿠튀르::르누아르 브랜드 매니저" {
       use_skill S1 variant 1 on pick(enemies, prefer: it is main_target, n: 1)
       note "'적에게 공격 시작 전' — 적 대상 공격으로 해석. main_target = 그 아군 공격의 메인 타겟. 심판!은 합 불가능 → 일방 공격"
     }
-    on use when skill is basic_skill {
+    on coin_start when skill is basic_skill and coin.is_last {
       text """기본 스킬의 마지막 코인 시작 시 (자신의 보존 위력 + 대상의 약속된 못/2)만큼 해당 코인의 최종 위력이 증가함 (최대 5)"""
-      hook last_coin_start_final_power(self.보존.potency + target.못 / 2, 5)
-      note "식은 마지막 코인 시작 시점에 평가. '코인 시작 시' 이벤트가 없어 엔진 구현. 위력 정수 처리는 엔진"
+      modify final_power min(floor(self.보존.potency + target.못 / 2), 5) coins current
+      note "코인 시작 시 = 토스 전 → 앞뒤와 무관하게 그 코인 위력에 더해짐 (사용자 확인 2026-10-28). 소수는 버림 [확인 필요]"
     }
     on use when self.신역 > 0 {
       when skill is S1 or skill is S1 variant 1 {

@@ -343,8 +343,8 @@ class _Validator:
             fields = V.SPECIAL_ROOTS[root]
             if root == "ev" and scope.event not in V.RESOURCE_EVENTS:
                 self.issue("error", r, scope, "ev 는 gained/consumed/applied/burst 이벤트 안에서만")
-            if root == "coin" and not scope.in_coin:
-                self.issue("error", r, scope, "coin.* 은 코인 블록 안에서만")
+            if root == "coin" and not scope.in_coin and scope.event not in V.COIN_EVENTS:   # 패시브의 코인 이벤트(on coin_start 등)도 허용
+                self.issue("error", r, scope, "coin.* 은 코인 블록이나 코인 이벤트(on coin_start, on hit 등) 안에서만")
             if len(p) == 1 and fields:
                 self.issue("error", r, scope, f"{root}: 필드 필요 ({sorted(fields)})")
             elif len(p) == 2 and p[1] not in fields:
