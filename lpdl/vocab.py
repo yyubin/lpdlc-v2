@@ -17,7 +17,8 @@ EVENTS = {
     "clash_start": "[합 진행 시]",
     "clash_win": "[합 승리시]",
     "clash_lose": "[합 패배시]",
-    "coin_flip": "[코인 판정 시]",
+    "coin_start": "[코인 시작 시] (공격할 때 코인마다 토스 직전, 코인당 1회. 합 중에는 발생하지 않음)",
+    "coin_flip": "[코인 판정 시] (출혈의 발동 시점. 원문에 이 태그를 쓰는 스킬·패시브는 없음)",
     "hit": "[적중시]",
     "head_hit": "[앞면 적중시]",
     "tail_hit": "[뒷면 적중시]",
@@ -43,7 +44,7 @@ EVENTS = {
     "consumed": "자원 소모 시              on consumed(self.보존.count) every 10",
     "applied": "상태 부여 시              on applied(진동)",
 }
-COIN_EVENTS = {"coin_flip", "hit", "head_hit", "tail_hit", "crit", "head", "tail", "clash_win", "clash_lose"}
+COIN_EVENTS = {"coin_start", "coin_flip", "hit", "head_hit", "tail_hit", "crit", "head", "tail", "clash_win", "clash_lose"}
 RESOURCE_EVENTS = {"gained", "consumed", "applied", "burst"}   # ev.amount 를 가짐
 
 # modify 대상. 피해 공식(gesellschaft docs/rules/00-core-rules.md)의 위치를 이름으로 구분한다.
