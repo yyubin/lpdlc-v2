@@ -5,6 +5,7 @@ v1 NLToSQLPipeline 의 재시도 루프를 이식하되, 피드백을 구문 오
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -94,8 +95,10 @@ class ClaudeCodeBackend:
         if session:
             cmd += ["--resume", session]
         with tempfile.TemporaryDirectory() as cwd:     # 프로젝트 CLAUDE.md 등을 읽지 않도록 빈 디렉터리에서 실행
+            # 셸에 ANTHROPIC_API_KEY 가 있으면 claude -p 가 로그인 대신 API 키 과금으로 실행됨 → 빼고 실행
+            env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
             p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, encoding="utf-8",
-                               cwd=cwd, timeout=self.timeout)
+                               cwd=cwd, timeout=self.timeout, env=env)
         if p.returncode != 0 and not p.stdout.strip():
             raise RuntimeError(f"claude -p 실패 ({p.returncode}): {p.stderr.strip()[:500]}")
         out = json.loads(p.stdout)
